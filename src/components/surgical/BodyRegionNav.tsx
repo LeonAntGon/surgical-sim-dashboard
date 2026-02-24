@@ -1,43 +1,45 @@
-import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import kidneyImg from "@/assets/organ-kidney.png";
+import liverImg from "@/assets/organ-liver.png";
 
-const regions = [
-  { id: "head", label: "Cabeza", icon: "🧠" },
-  { id: "thorax", label: "Tórax", icon: "🫁" },
-  { id: "abdomen", label: "Abdomen", icon: "🫀" },
-  { id: "pelvis", label: "Pelvis", icon: "🦴" },
-  { id: "extremities", label: "Extremidades", icon: "🦵" },
+const simulations = [
+  { id: "kidney", label: "Riñón", image: kidneyImg, path: "/simulation/kidney" },
+  { id: "liver", label: "Hígado", image: liverImg, path: "/simulation/liver" },
 ];
 
 export function BodyRegionNav() {
-  const [active, setActive] = useState("abdomen");
+  const location = useLocation();
 
   return (
-    <div className="glass-panel rounded-xl px-3 py-2 flex items-center gap-2 animate-slide-up">
-      <button className="instrument-btn w-7 h-7 shrink-0">
-        <ChevronLeft className="w-4 h-4" />
-      </button>
+    <div className="glass-panel rounded-xl px-3 py-2 flex items-center gap-3 animate-slide-up">
+      <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold shrink-0">
+        Simulaciones
+      </span>
 
-      <div className="flex items-center gap-1 overflow-x-auto">
-        {regions.map((region) => (
-          <button
-            key={region.id}
-            onClick={() => setActive(region.id)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-all duration-200 ${
-              active === region.id
-                ? "bg-primary/20 text-primary border border-primary/40"
-                : "text-muted-foreground hover:text-foreground hover:bg-secondary border border-transparent"
-            }`}
-          >
-            <span className="text-sm">{region.icon}</span>
-            <span>{region.label}</span>
-          </button>
-        ))}
+      <div className="flex items-center gap-2 overflow-x-auto">
+        {simulations.map((sim) => {
+          const isActive = location.pathname === sim.path;
+          return (
+            <Link
+              key={sim.id}
+              to={sim.path}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-all duration-200 ${
+                isActive
+                  ? "bg-primary/20 text-primary border border-primary/40"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary border border-transparent"
+              }`}
+            >
+              <img
+                src={sim.image}
+                alt={sim.label}
+                className="w-7 h-7 rounded-md object-cover"
+                draggable={false}
+              />
+              <span className="font-medium">{sim.label}</span>
+            </Link>
+          );
+        })}
       </div>
-
-      <button className="instrument-btn w-7 h-7 shrink-0">
-        <ChevronRight className="w-4 h-4" />
-      </button>
     </div>
   );
 }
