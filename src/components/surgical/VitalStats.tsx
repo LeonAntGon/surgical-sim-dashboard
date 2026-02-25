@@ -1,13 +1,22 @@
 import { Activity, Heart, Thermometer, Timer } from "lucide-react";
+import { useSimulation } from "@/contexts/SimulationContext";
 
-const stats = [
-  { icon: Heart, label: "FC", value: "72", unit: "bpm", color: "text-destructive" },
-  { icon: Activity, label: "SpO₂", value: "98", unit: "%", color: "text-success" },
-  { icon: Thermometer, label: "Temp", value: "36.5", unit: "°C", color: "text-warning" },
-  { icon: Timer, label: "Tiempo", value: "04:32", unit: "min", color: "text-primary" },
-];
+function formatTime(totalSeconds: number) {
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
 
 export function VitalStats() {
+  const { elapsedSeconds } = useSimulation();
+
+  const stats = [
+    { icon: Heart, label: "FC", value: "72", unit: "bpm", color: "text-destructive" },
+    { icon: Activity, label: "SpO₂", value: "98", unit: "%", color: "text-success" },
+    { icon: Thermometer, label: "Temp", value: "36.5", unit: "°C", color: "text-warning" },
+    { icon: Timer, label: "Tiempo", value: formatTime(elapsedSeconds), unit: "min", color: "text-primary" },
+  ];
+
   return (
     <div className="glass-panel rounded-xl p-3 flex flex-col gap-3 w-40 animate-slide-up">
       <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
