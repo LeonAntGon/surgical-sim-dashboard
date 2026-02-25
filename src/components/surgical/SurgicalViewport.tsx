@@ -10,7 +10,6 @@ export function SurgicalViewport() {
   const { activeViewTool, viewResetCounter } = useSimulation();
   const [zoom, setZoom] = useState([50]);
   
-  // Guardamos las coordenadas, pero ya no movemos el HTML con ellas
   const pan = useRef({ x: 0, y: 0 });
   const isDragging = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
@@ -18,12 +17,10 @@ export function SurgicalViewport() {
   const containerRef = useRef<HTMLDivElement>(null);
   const currentOrgan = organ || "liver";
 
-  // Actualiza las coordenadas con los botones
   const movePan = useCallback((dx: number, dy: number) => {
     pan.current = { x: pan.current.x + dx, y: pan.current.y + dy };
   }, []);
 
-  // Reseteo de vista
   useEffect(() => {
     setZoom([50]);
     pan.current = { x: 0, y: 0 };
@@ -91,7 +88,6 @@ export function SurgicalViewport() {
       onPointerCancel={handlePointerEnd}
       onPointerLeave={handlePointerEnd}
     >
-      {/* SOLUCIÓN: Eliminamos el div que se movía y pasamos panRef directamente al 3D */}
       <div className="absolute inset-0">
         <OrganViewer3D organ={currentOrgan} zoom={zoom[0]} panRef={pan} />
       </div>
@@ -114,7 +110,7 @@ export function SurgicalViewport() {
       {/* Controles Direccionales */}
       <div className="absolute bottom-3 left-3 glass-panel rounded-lg p-1.5 flex flex-col items-center gap-1 z-10">
         <button
-          onClick={() => movePan(0, -50)}
+          onClick={() => movePan(0, 50)} // INVERTIDO: Ahora mueve hacia arriba
           className="p-1 sm:p-1.5 hover:bg-primary/20 rounded-md transition-colors active:scale-95"
         >
           <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
@@ -127,7 +123,7 @@ export function SurgicalViewport() {
             <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
           </button>
           <button
-            onClick={() => movePan(0, 50)}
+            onClick={() => movePan(0, -50)} // INVERTIDO: Ahora mueve hacia abajo
             className="p-1 sm:p-1.5 hover:bg-primary/20 rounded-md transition-colors active:scale-95"
           >
             <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
