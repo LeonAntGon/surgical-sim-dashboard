@@ -9,17 +9,30 @@ export function SurgicalViewport() {
   const { organ } = useParams<{ organ: string }>();
   const { activeViewTool, viewResetCounter } = useSimulation();
   const [zoom, setZoom] = useState([50]);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
+  
+  // MEJORA: Usamos Refs para el paneo. Al no usar useState, evitamos re-renders 
+  // masivos del modelo 3D al arrastrar, vital para el rendimiento en celulares.
+  const pan = useRef({ x: 0, y: 0 });
   const isDragging = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
+  
   const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const currentOrgan = organ || "liver";
+
+  // Función para actualizar el DOM directamente sin re-renderizar React
+  const updateTransform = () => {
+    if (contentRef.current) {
+      contentRef.current.style.transform = `translate(${pan.current.x}px, ${pan.current.y}px)`;
+    }
+  };
 
   // Reset view when reset button is pressed
   useEffect(() => {
     setZoom([50]);
-    setPan({ x: 0, y: 0 });
+    pan.current = { x: 0, y: 0 };
+    updateTransform();
   }, [viewResetCounter]);
 
   const handlePointerDown = useCallback(
@@ -38,26 +51,36 @@ export function SurgicalViewport() {
       if (isDragging.current && activeViewTool === "move") {
         const dx = e.clientX - lastPos.current.x;
         const dy = e.clientY - lastPos.current.y;
-        setPan((p) => ({ x: p.x + dx, y: p.y + dy }));
+        pan.current = { x: pan.current.x + dx, y: pan.current.y + dy };
         lastPos.current = { x: e.clientX, y: e.clientY };
+        updateTransform(); // Actualizamos visualmente
       }
     },
     [activeViewTool]
   );
 
-  const handlePointerUp = useCallback(() => {
+  // MEJORA: Función unificada para soltar, cancelar o salir del área
+  const handlePointerEnd = useCallback(() => {
     isDragging.current = false;
   }, []);
 
-  const handleWheel = useCallback(
-    (e: React.WheelEvent) => {
+  // MEJORA: Manejo nativo del wheel para poder usar preventDefault sin warnings
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
       if (activeViewTool === "zoom") {
         e.preventDefault();
-        setZoom(([z]) => [Math.max(0, Math.min(100, z - e.deltaY * 0.1))]);
+        setZoom((prevZoom) => [
+          Math.max(0, Math.min(100, prevZoom[0] - e.deltaY * 0.05))
+        ]);
       }
-    },
-    [activeViewTool]
-  );
+    };
+
+    container.addEventListener("wheel", handleWheel, { passive: false });
+    return () => container.removeEventListener("wheel", handleWheel);
+  }, [activeViewTool]);
 
   const cursor =
     activeViewTool === "move"
@@ -69,17 +92,21 @@ export function SurgicalViewport() {
   return (
     <div
       ref={containerRef}
-      className="relative flex-1 rounded-xl overflow-hidden glow-border bg-background"
+      // MEJORA: touch-none evita que el celular intente scrollear la web al arrastrar
+      className="relative flex-1 rounded-xl overflow-hidden glow-border bg-background touch-none"
       style={{ cursor }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onWheel={handleWheel}
+      onPointerUp={handlePointerEnd}
+      onPointerCancel={handlePointerEnd}
+      onPointerLeave={handlePointerEnd}
     >
       <div
-        className="w-full h-full transition-transform duration-100"
+        ref={contentRef}
+        // MEJORA: Reduje la duración de la transición para que el drag se sienta inmediato
+        className="w-full h-full transition-transform duration-75"
         style={{
-          transform: `translate(${pan.x}px, ${pan.y}px)`,
+          transform: `translate(${pan.current.x}px, ${pan.current.y}px)`,
         }}
       >
         <OrganViewer3D organ={currentOrgan} zoom={zoom[0]} />
@@ -101,7 +128,7 @@ export function SurgicalViewport() {
       />
 
       {/* Zoom control overlay */}
-      <div className="absolute bottom-3 right-3 glass-panel rounded-lg px-3 py-2 flex items-center gap-2 w-48">
+      <div className="absolute bottom-3 right-3 glass-panel rounded-lg px-3 py-2 flex items-center gap-2 w-48 z-10">
         <ZoomOut className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
         <Slider
           value={zoom}
@@ -112,7 +139,9 @@ export function SurgicalViewport() {
           className="[&_[role=slider]]:bg-primary [&_[role=slider]]:border-primary [&_[role=slider]]:w-3 [&_[role=slider]]:h-3"
         />
         <ZoomIn className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-        <span className="text-mono text-[10px] text-primary w-8 text-right">{zoom[0]}%</span>
+        <span className="text-mono text-[10px] text-primary w-8 text-right">
+          {Math.round(zoom[0])}%
+        </span>
       </div>
     </div>
   );
