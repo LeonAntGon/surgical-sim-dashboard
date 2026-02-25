@@ -20,16 +20,12 @@ function OrganModel({ organ, zoom }: { organ: string; zoom: number }) {
   const path = modelPaths[organ] || modelPaths.liver;
   const { scene } = useGLTF(path);
 
-  useFrame((_, delta) => {
+  useFrame(() => {
     if (groupRef.current) {
-      // Rotación continua
-      groupRef.current.rotation.y += delta * 0.15;
-
-      // MEJORA: Zoom fluido modificando la escala en lugar del FOV de la cámara.
-      // Mapeamos el valor de zoom (0-100) a un multiplicador de escala (ej. 0.5x a 2.5x).
-      const targetScale = 0.5 + (zoom / 100) * 2;
+      // ELIMINADO: La rotación automática. Ahora el modelo solo se mueve si tú lo giras.
       
-      // Usamos lerp para que la transición del zoom sea suave ("mantequilla")
+      // Mantenemos el zoom fluido
+      const targetScale = 0.5 + (zoom / 100) * 2;
       groupRef.current.scale.lerp(
         new THREE.Vector3(targetScale, targetScale, targetScale),
         0.1
@@ -39,7 +35,6 @@ function OrganModel({ organ, zoom }: { organ: string; zoom: number }) {
 
   return (
     <Center>
-      {/* Añadimos una escala inicial un poco más pequeña por si el .glb original es gigante */}
       <group ref={groupRef} scale={1}>
         <primitive object={scene} />
       </group>
@@ -106,8 +101,6 @@ export function OrganViewer3D({ organ, zoom }: OrganViewer3DProps) {
   return (
     <WebGLErrorBoundary fallback={<FallbackImage organ={organ} zoom={zoom} />}>
       <Canvas
-        // MEJORA: Alejamos la cámara (Z=6 en lugar de Z=3) y fijamos el FOV a 45.
-        // Esto evita que el modelo te explote en la cara al cargar.
         camera={{ position: [0, 0, 6], fov: 45 }}
         gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
         style={{ width: "100%", height: "100%" }}
@@ -118,7 +111,6 @@ export function OrganViewer3D({ organ, zoom }: OrganViewer3DProps) {
         <pointLight position={[0, 2, 0]} intensity={0.5} color="hsl(174, 60%, 60%)" />
 
         <Suspense fallback={<LoadingFallback />}>
-          {/* Pasamos el zoom directamente al modelo */}
           <OrganModel organ={organ} zoom={zoom} />
           <Environment preset="studio" />
         </Suspense>

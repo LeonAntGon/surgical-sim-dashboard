@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { Slider } from "@/components/ui/slider";
-import { ZoomIn, ZoomOut } from "lucide-react";
+// Agregamos los iconos de Chevron para los botones de dirección
+import { ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { OrganViewer3D } from "./OrganViewer3D";
 import { useSimulation } from "@/contexts/SimulationContext";
 
@@ -10,8 +11,6 @@ export function SurgicalViewport() {
   const { activeViewTool, viewResetCounter } = useSimulation();
   const [zoom, setZoom] = useState([50]);
   
-  // MEJORA: Usamos Refs para el paneo. Al no usar useState, evitamos re-renders 
-  // masivos del modelo 3D al arrastrar, vital para el rendimiento en celulares.
   const pan = useRef({ x: 0, y: 0 });
   const isDragging = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
@@ -21,14 +20,18 @@ export function SurgicalViewport() {
 
   const currentOrgan = organ || "liver";
 
-  // Función para actualizar el DOM directamente sin re-renderizar React
   const updateTransform = () => {
     if (contentRef.current) {
       contentRef.current.style.transform = `translate(${pan.current.x}px, ${pan.current.y}px)`;
     }
   };
 
-  // Reset view when reset button is pressed
+  // NUEVO: Función para mover la vista usando los botones
+  const movePan = useCallback((dx: number, dy: number) => {
+    pan.current = { x: pan.current.x + dx, y: pan.current.y + dy };
+    updateTransform();
+  }, []);
+
   useEffect(() => {
     setZoom([50]);
     pan.current = { x: 0, y: 0 };
@@ -53,18 +56,16 @@ export function SurgicalViewport() {
         const dy = e.clientY - lastPos.current.y;
         pan.current = { x: pan.current.x + dx, y: pan.current.y + dy };
         lastPos.current = { x: e.clientX, y: e.clientY };
-        updateTransform(); // Actualizamos visualmente
+        updateTransform(); 
       }
     },
     [activeViewTool]
   );
 
-  // MEJORA: Función unificada para soltar, cancelar o salir del área
   const handlePointerEnd = useCallback(() => {
     isDragging.current = false;
   }, []);
 
-  // MEJORA: Manejo nativo del wheel para poder usar preventDefault sin warnings
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -92,7 +93,6 @@ export function SurgicalViewport() {
   return (
     <div
       ref={containerRef}
-      // MEJORA: touch-none evita que el celular intente scrollear la web al arrastrar
       className="relative flex-1 rounded-xl overflow-hidden glow-border bg-background touch-none"
       style={{ cursor }}
       onPointerDown={handlePointerDown}
@@ -103,7 +103,6 @@ export function SurgicalViewport() {
     >
       <div
         ref={contentRef}
-        // MEJORA: Reduje la duración de la transición para que el drag se sienta inmediato
         className="w-full h-full transition-transform duration-75"
         style={{
           transform: `translate(${pan.current.x}px, ${pan.current.y}px)`,
@@ -127,8 +126,42 @@ export function SurgicalViewport() {
         }}
       />
 
-      {/* Zoom control overlay */}
-      <div className="absolute bottom-3 right-3 glass-panel rounded-lg px-3 py-2 flex items-center gap-2 w-48 z-10">
+      {/* NUEVO: Controles Direccionales (D-Pad) */}
+      <div className="absolute bottom-3 left-3 glass-panel rounded-lg p-1.5 flex flex-col items-center gap-1 z-10">
+        <button
+          onClick={() => movePan(0, -50)}
+          className="p-1 sm:p-1.5 hover:bg-primary/20 rounded-md transition-colors active:scale-95"
+          title="Mover arriba"
+        >
+          <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+        </button>
+        <div className="flex gap-1">
+          <button
+            onClick={() => movePan(-50, 0)}
+            className="p-1 sm:p-1.5 hover:bg-primary/20 rounded-md transition-colors active:scale-95"
+            title="Mover izquierda"
+          >
+            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+          </button>
+          <button
+            onClick={() => movePan(0, 50)}
+            className="p-1 sm:p-1.5 hover:bg-primary/20 rounded-md transition-colors active:scale-95"
+            title="Mover abajo"
+          >
+            <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+          </button>
+          <button
+            onClick={() => movePan(50, 0)}
+            className="p-1 sm:p-1.5 hover:bg-primary/20 rounded-md transition-colors active:scale-95"
+            title="Mover derecha"
+          >
+            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+          </button>
+        </div>
+      </div>
+
+      {/* Zoom control overlay (Ahora es responsive: w-32 en móvil, w-48 en escritorio) */}
+      <div className="absolute bottom-3 right-3 glass-panel rounded-lg px-2 sm:px-3 py-2 flex items-center gap-2 w-32 sm:w-48 z-10">
         <ZoomOut className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
         <Slider
           value={zoom}
@@ -139,7 +172,7 @@ export function SurgicalViewport() {
           className="[&_[role=slider]]:bg-primary [&_[role=slider]]:border-primary [&_[role=slider]]:w-3 [&_[role=slider]]:h-3"
         />
         <ZoomIn className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-        <span className="text-mono text-[10px] text-primary w-8 text-right">
+        <span className="text-mono text-[10px] text-primary w-8 text-right hidden sm:inline-block">
           {Math.round(zoom[0])}%
         </span>
       </div>
