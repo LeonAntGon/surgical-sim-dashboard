@@ -2,11 +2,17 @@ import { Suspense, useRef, useState as useReactState, Component, ReactNode } fro
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, useGLTF, Environment, Center } from "@react-three/drei";
 import * as THREE from "three";
-import surgicalImage from "@/assets/surgical-viewport.jpg";
+import surgicalKidney from "@/assets/surgical-kidney.jpg";
+import surgicalLiver from "@/assets/surgical-liver.jpg";
 
 const modelPaths: Record<string, string> = {
   kidney: "/models/kidney.glb",
   liver: "/models/liver.glb",
+};
+
+const fallbackImages: Record<string, string> = {
+  kidney: surgicalKidney,
+  liver: surgicalLiver,
 };
 
 function OrganModel({ organ }: { organ: string }) {
@@ -38,7 +44,6 @@ function LoadingFallback() {
   );
 }
 
-// Error boundary to catch WebGL failures
 class WebGLErrorBoundary extends Component<
   { children: ReactNode; fallback: ReactNode },
   { hasError: boolean }
@@ -52,11 +57,12 @@ class WebGLErrorBoundary extends Component<
   }
 }
 
-function FallbackImage({ zoom }: { zoom: number }) {
+function FallbackImage({ organ, zoom }: { organ: string; zoom: number }) {
+  const src = fallbackImages[organ] || fallbackImages.liver;
   return (
     <img
-      src={surgicalImage}
-      alt="Vista quirúrgica"
+      src={src}
+      alt={`Vista quirúrgica - ${organ}`}
       className="w-full h-full object-cover transition-transform duration-200"
       style={{ transform: `scale(${1 + zoom / 100})` }}
       draggable={false}
@@ -82,13 +88,13 @@ export function OrganViewer3D({ organ, zoom }: OrganViewer3DProps) {
   const [webgl] = useReactState(() => supportsWebGL());
 
   if (!webgl) {
-    return <FallbackImage zoom={zoom} />;
+    return <FallbackImage organ={organ} zoom={zoom} />;
   }
 
   const fov = 50 - (zoom / 100) * 30;
 
   return (
-    <WebGLErrorBoundary fallback={<FallbackImage zoom={zoom} />}>
+    <WebGLErrorBoundary fallback={<FallbackImage organ={organ} zoom={zoom} />}>
       <Canvas
         camera={{ position: [0, 0, 3], fov }}
         gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
