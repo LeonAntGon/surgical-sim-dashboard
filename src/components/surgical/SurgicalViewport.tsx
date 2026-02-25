@@ -53,6 +53,7 @@ export function SurgicalViewport() {
     isDragging.current = false;
   }, []);
 
+  // Control del zoom con la rueda del mouse
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -69,6 +70,46 @@ export function SurgicalViewport() {
     container.addEventListener("wheel", handleWheel, { passive: false });
     return () => container.removeEventListener("wheel", handleWheel);
   }, [activeViewTool]);
+
+  // NUEVO: Control del paneo con el teclado (Flechas y WASD)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignoramos si el usuario está escribiendo en algún input de la página
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      switch (e.key) {
+        case "ArrowUp":
+        case "w":
+        case "W":
+          e.preventDefault(); // Evita que la página haga scroll
+          movePan(0, 50);
+          break;
+        case "ArrowDown":
+        case "s":
+        case "S":
+          e.preventDefault();
+          movePan(0, -50);
+          break;
+        case "ArrowLeft":
+        case "a":
+        case "A":
+          e.preventDefault();
+          movePan(-50, 0);
+          break;
+        case "ArrowRight":
+        case "d":
+        case "D":
+          e.preventDefault();
+          movePan(50, 0);
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [movePan]);
 
   const cursor =
     activeViewTool === "move"
@@ -110,8 +151,9 @@ export function SurgicalViewport() {
       {/* Controles Direccionales */}
       <div className="absolute bottom-3 left-3 glass-panel rounded-lg p-1.5 flex flex-col items-center gap-1 z-10">
         <button
-          onClick={() => movePan(0, 50)} // INVERTIDO: Ahora mueve hacia arriba
+          onClick={() => movePan(0, 50)}
           className="p-1 sm:p-1.5 hover:bg-primary/20 rounded-md transition-colors active:scale-95"
+          title="Mover arriba (W / ↑)"
         >
           <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
         </button>
@@ -119,18 +161,21 @@ export function SurgicalViewport() {
           <button
             onClick={() => movePan(-50, 0)}
             className="p-1 sm:p-1.5 hover:bg-primary/20 rounded-md transition-colors active:scale-95"
+            title="Mover izquierda (A / ←)"
           >
             <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
           </button>
           <button
-            onClick={() => movePan(0, -50)} // INVERTIDO: Ahora mueve hacia abajo
+            onClick={() => movePan(0, -50)}
             className="p-1 sm:p-1.5 hover:bg-primary/20 rounded-md transition-colors active:scale-95"
+            title="Mover abajo (S / ↓)"
           >
             <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
           </button>
           <button
             onClick={() => movePan(50, 0)}
             className="p-1 sm:p-1.5 hover:bg-primary/20 rounded-md transition-colors active:scale-95"
+            title="Mover derecha (D / →)"
           >
             <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
           </button>
