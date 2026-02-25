@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Scissors,
   Pen,
@@ -10,6 +9,7 @@ import {
   Slice,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useSimulation } from "@/contexts/SimulationContext";
 
 const instruments = [
   { id: "scalpel", icon: Pen, label: "Bisturí", shortcut: "1" },
@@ -26,7 +26,16 @@ const viewTools = [
 ];
 
 export function InstrumentToolbar() {
-  const [activeInstrument, setActiveInstrument] = useState("scalpel");
+  const { activeInstrument, setActiveInstrument, activeViewTool, setActiveViewTool, resetView } =
+    useSimulation();
+
+  const handleViewTool = (id: string) => {
+    if (id === "reset") {
+      resetView();
+    } else {
+      setActiveViewTool(id);
+    }
+  };
 
   return (
     <div className="glass-panel rounded-xl p-2 flex flex-col gap-1 animate-slide-up">
@@ -62,7 +71,12 @@ export function InstrumentToolbar() {
       {viewTools.map((tool) => (
         <Tooltip key={tool.id}>
           <TooltipTrigger asChild>
-            <button className="instrument-btn w-11 h-11">
+            <button
+              onClick={() => handleViewTool(tool.id)}
+              className={`instrument-btn w-11 h-11 ${
+                tool.id !== "reset" && activeViewTool === tool.id ? "active" : ""
+              }`}
+            >
               <tool.icon className="w-5 h-5" />
             </button>
           </TooltipTrigger>
