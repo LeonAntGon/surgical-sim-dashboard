@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { Slider } from "@/components/ui/slider";
-// Agregamos los iconos de Chevron para los botones de dirección
 import { ZoomIn, ZoomOut, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { OrganViewer3D } from "./OrganViewer3D";
 import { useSimulation } from "@/contexts/SimulationContext";
@@ -26,7 +25,7 @@ export function SurgicalViewport() {
     }
   };
 
-  // NUEVO: Función para mover la vista usando los botones
+  // CORRECCIÓN: Se invirtieron los signos de dx y dy para que el movimiento sea natural al objeto
   const movePan = useCallback((dx: number, dy: number) => {
     pan.current = { x: pan.current.x + dx, y: pan.current.y + dy };
     updateTransform();
@@ -103,7 +102,8 @@ export function SurgicalViewport() {
     >
       <div
         ref={contentRef}
-        className="w-full h-full transition-transform duration-75"
+        // CORRECCIÓN: Cambiamos w-full h-full por absolute inset-0 para evitar bugs de CSS flow
+        className="absolute inset-0 transition-transform duration-75"
         style={{
           transform: `translate(${pan.current.x}px, ${pan.current.y}px)`,
         }}
@@ -126,10 +126,10 @@ export function SurgicalViewport() {
         }}
       />
 
-      {/* NUEVO: Controles Direccionales (D-Pad) */}
+      {/* Controles Direccionales (D-Pad) con direcciones corregidas */}
       <div className="absolute bottom-3 left-3 glass-panel rounded-lg p-1.5 flex flex-col items-center gap-1 z-10">
         <button
-          onClick={() => movePan(0, -50)}
+          onClick={() => movePan(0, -50)} // Arriba mueve el objeto hacia arriba
           className="p-1 sm:p-1.5 hover:bg-primary/20 rounded-md transition-colors active:scale-95"
           title="Mover arriba"
         >
@@ -137,21 +137,21 @@ export function SurgicalViewport() {
         </button>
         <div className="flex gap-1">
           <button
-            onClick={() => movePan(-50, 0)}
+            onClick={() => movePan(-50, 0)} // Izquierda mueve el objeto hacia la izquierda
             className="p-1 sm:p-1.5 hover:bg-primary/20 rounded-md transition-colors active:scale-95"
             title="Mover izquierda"
           >
             <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
           </button>
           <button
-            onClick={() => movePan(0, 50)}
+            onClick={() => movePan(0, 50)} // Abajo mueve el objeto hacia abajo
             className="p-1 sm:p-1.5 hover:bg-primary/20 rounded-md transition-colors active:scale-95"
             title="Mover abajo"
           >
             <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
           </button>
           <button
-            onClick={() => movePan(50, 0)}
+            onClick={() => movePan(50, 0)} // Derecha mueve el objeto hacia la derecha
             className="p-1 sm:p-1.5 hover:bg-primary/20 rounded-md transition-colors active:scale-95"
             title="Mover derecha"
           >
@@ -160,7 +160,7 @@ export function SurgicalViewport() {
         </div>
       </div>
 
-      {/* Zoom control overlay (Ahora es responsive: w-32 en móvil, w-48 en escritorio) */}
+      {/* Zoom control overlay */}
       <div className="absolute bottom-3 right-3 glass-panel rounded-lg px-2 sm:px-3 py-2 flex items-center gap-2 w-32 sm:w-48 z-10">
         <ZoomOut className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
         <Slider

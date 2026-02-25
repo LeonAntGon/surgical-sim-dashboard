@@ -1,4 +1,4 @@
-import { Suspense, useRef, useState as useReactState, Component, ReactNode } from "react";
+import { Suspense, useRef, useState as useReactState, Component, ReactNode, useLayoutEffect } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, useGLTF, Environment, Center } from "@react-three/drei";
 import * as THREE from "three";
@@ -20,11 +20,25 @@ function OrganModel({ organ, zoom }: { organ: string; zoom: number }) {
   const path = modelPaths[organ] || modelPaths.liver;
   const { scene } = useGLTF(path);
 
+  // CORRECCIÓN: Auto-escalado inteligente. Mide el modelo y lo ajusta para que 
+  // no quede gigante ni minúsculo sin importar cómo venga el .glb
+  useLayoutEffect(() => {
+    if (scene) {
+      scene.scale.set(1, 1, 1); // Reseteamos escala por si acaso
+      const box = new THREE.Box3().setFromObject(scene);
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      
+      if (maxDim > 0) {
+        // Fijamos un tamaño objetivo de 4 unidades para que encaje perfecto en cámara
+        const scale = 4 / maxDim;
+        scene.scale.set(scale, scale, scale);
+      }
+    }
+  }, [scene]);
+
   useFrame(() => {
     if (groupRef.current) {
-      // ELIMINADO: La rotación automática. Ahora el modelo solo se mueve si tú lo giras.
-      
-      // Mantenemos el zoom fluido
       const targetScale = 0.5 + (zoom / 100) * 2;
       groupRef.current.scale.lerp(
         new THREE.Vector3(targetScale, targetScale, targetScale),
