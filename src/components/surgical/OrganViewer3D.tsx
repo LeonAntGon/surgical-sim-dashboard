@@ -1,7 +1,8 @@
-import { Suspense, useRef } from "react";
+import { Suspense, useRef, useState as useReactState, Component, ReactNode } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, useGLTF, Environment, Center } from "@react-three/drei";
 import * as THREE from "three";
+import surgicalImage from "@/assets/surgical-viewport.jpg";
 
 const modelPaths: Record<string, string> = {
   kidney: "/models/kidney.glb",
@@ -37,41 +38,83 @@ function LoadingFallback() {
   );
 }
 
+// Error boundary to catch WebGL failures
+class WebGLErrorBoundary extends Component<
+  { children: ReactNode; fallback: ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  render() {
+    return this.state.hasError ? this.props.fallback : this.props.children;
+  }
+}
+
+function FallbackImage({ zoom }: { zoom: number }) {
+  return (
+    <img
+      src={surgicalImage}
+      alt="Vista quirúrgica"
+      className="w-full h-full object-cover transition-transform duration-200"
+      style={{ transform: `scale(${1 + zoom / 100})` }}
+      draggable={false}
+    />
+  );
+}
+
+function supportsWebGL(): boolean {
+  try {
+    const c = document.createElement("canvas");
+    return !!(c.getContext("webgl2") || c.getContext("webgl"));
+  } catch {
+    return false;
+  }
+}
+
 interface OrganViewer3DProps {
   organ: string;
   zoom: number;
 }
 
 export function OrganViewer3D({ organ, zoom }: OrganViewer3DProps) {
-  const fov = 50 - (zoom / 100) * 30; // zoom 0 → fov 50, zoom 100 → fov 20
+  const [webgl] = useReactState(() => supportsWebGL());
+
+  if (!webgl) {
+    return <FallbackImage zoom={zoom} />;
+  }
+
+  const fov = 50 - (zoom / 100) * 30;
 
   return (
-    <Canvas
-      camera={{ position: [0, 0, 3], fov }}
-      gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
-      style={{ width: "100%", height: "100%" }}
-    >
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[5, 5, 5]} intensity={1} />
-      <directionalLight position={[-3, -2, -3]} intensity={0.3} />
-      <pointLight position={[0, 2, 0]} intensity={0.5} color="hsl(174, 60%, 60%)" />
+    <WebGLErrorBoundary fallback={<FallbackImage zoom={zoom} />}>
+      <Canvas
+        camera={{ position: [0, 0, 3], fov }}
+        gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping }}
+        style={{ width: "100%", height: "100%" }}
+      >
+        <ambientLight intensity={0.4} />
+        <directionalLight position={[5, 5, 5]} intensity={1} />
+        <directionalLight position={[-3, -2, -3]} intensity={0.3} />
+        <pointLight position={[0, 2, 0]} intensity={0.5} color="hsl(174, 60%, 60%)" />
 
-      <Suspense fallback={<LoadingFallback />}>
-        <OrganModel organ={organ} />
-        <Environment preset="studio" />
-      </Suspense>
+        <Suspense fallback={<LoadingFallback />}>
+          <OrganModel organ={organ} />
+          <Environment preset="studio" />
+        </Suspense>
 
-      <OrbitControls
-        enablePan={false}
-        enableZoom={false}
-        minPolarAngle={Math.PI / 6}
-        maxPolarAngle={Math.PI - Math.PI / 6}
-        dampingFactor={0.05}
-        enableDamping
-      />
-    </Canvas>
+        <OrbitControls
+          enablePan={false}
+          enableZoom={false}
+          minPolarAngle={Math.PI / 6}
+          maxPolarAngle={Math.PI - Math.PI / 6}
+          dampingFactor={0.05}
+          enableDamping
+        />
+      </Canvas>
+    </WebGLErrorBoundary>
   );
 }
 
-// Preload models
 Object.values(modelPaths).forEach((path) => useGLTF.preload(path));
