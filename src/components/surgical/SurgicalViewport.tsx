@@ -1,20 +1,18 @@
 import { useState } from "react";
+import { useParams } from "react-router-dom";
 import { Slider } from "@/components/ui/slider";
 import { ZoomIn, ZoomOut } from "lucide-react";
-import surgicalImage from "@/assets/surgical-viewport.jpg";
+import { OrganViewer3D } from "./OrganViewer3D";
 
 export function SurgicalViewport() {
+  const { organ } = useParams<{ organ: string }>();
   const [zoom, setZoom] = useState([50]);
 
+  const currentOrgan = organ || "liver";
+
   return (
-    <div className="relative flex-1 rounded-xl overflow-hidden glow-border">
-      <img
-        src={surgicalImage}
-        alt="Vista quirúrgica - Simulación de hígado"
-        className="w-full h-full object-cover transition-transform duration-200"
-        style={{ transform: `scale(${1 + zoom[0] / 100})` }}
-        draggable={false}
-      />
+    <div className="relative flex-1 rounded-xl overflow-hidden glow-border bg-background">
+      <OrganViewer3D organ={currentOrgan} zoom={zoom[0]} />
 
       {/* Crosshair overlay */}
       <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
