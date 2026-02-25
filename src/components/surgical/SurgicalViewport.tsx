@@ -10,31 +10,23 @@ export function SurgicalViewport() {
   const { activeViewTool, viewResetCounter } = useSimulation();
   const [zoom, setZoom] = useState([50]);
   
+  // Guardamos las coordenadas, pero ya no movemos el HTML con ellas
   const pan = useRef({ x: 0, y: 0 });
   const isDragging = useRef(false);
   const lastPos = useRef({ x: 0, y: 0 });
   
   const containerRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-
   const currentOrgan = organ || "liver";
 
-  const updateTransform = () => {
-    if (contentRef.current) {
-      contentRef.current.style.transform = `translate(${pan.current.x}px, ${pan.current.y}px)`;
-    }
-  };
-
-  // CORRECCIÓN: Se invirtieron los signos de dx y dy para que el movimiento sea natural al objeto
+  // Actualiza las coordenadas con los botones
   const movePan = useCallback((dx: number, dy: number) => {
     pan.current = { x: pan.current.x + dx, y: pan.current.y + dy };
-    updateTransform();
   }, []);
 
+  // Reseteo de vista
   useEffect(() => {
     setZoom([50]);
     pan.current = { x: 0, y: 0 };
-    updateTransform();
   }, [viewResetCounter]);
 
   const handlePointerDown = useCallback(
@@ -55,7 +47,6 @@ export function SurgicalViewport() {
         const dy = e.clientY - lastPos.current.y;
         pan.current = { x: pan.current.x + dx, y: pan.current.y + dy };
         lastPos.current = { x: e.clientX, y: e.clientY };
-        updateTransform(); 
       }
     },
     [activeViewTool]
@@ -100,15 +91,9 @@ export function SurgicalViewport() {
       onPointerCancel={handlePointerEnd}
       onPointerLeave={handlePointerEnd}
     >
-      <div
-        ref={contentRef}
-        // CORRECCIÓN: Cambiamos w-full h-full por absolute inset-0 para evitar bugs de CSS flow
-        className="absolute inset-0 transition-transform duration-75"
-        style={{
-          transform: `translate(${pan.current.x}px, ${pan.current.y}px)`,
-        }}
-      >
-        <OrganViewer3D organ={currentOrgan} zoom={zoom[0]} />
+      {/* SOLUCIÓN: Eliminamos el div que se movía y pasamos panRef directamente al 3D */}
+      <div className="absolute inset-0">
+        <OrganViewer3D organ={currentOrgan} zoom={zoom[0]} panRef={pan} />
       </div>
 
       {/* Crosshair overlay */}
@@ -126,41 +111,37 @@ export function SurgicalViewport() {
         }}
       />
 
-      {/* Controles Direccionales (D-Pad) con direcciones corregidas */}
+      {/* Controles Direccionales */}
       <div className="absolute bottom-3 left-3 glass-panel rounded-lg p-1.5 flex flex-col items-center gap-1 z-10">
         <button
-          onClick={() => movePan(0, -50)} // Arriba mueve el objeto hacia arriba
+          onClick={() => movePan(0, -50)}
           className="p-1 sm:p-1.5 hover:bg-primary/20 rounded-md transition-colors active:scale-95"
-          title="Mover arriba"
         >
           <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
         </button>
         <div className="flex gap-1">
           <button
-            onClick={() => movePan(-50, 0)} // Izquierda mueve el objeto hacia la izquierda
+            onClick={() => movePan(-50, 0)}
             className="p-1 sm:p-1.5 hover:bg-primary/20 rounded-md transition-colors active:scale-95"
-            title="Mover izquierda"
           >
             <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
           </button>
           <button
-            onClick={() => movePan(0, 50)} // Abajo mueve el objeto hacia abajo
+            onClick={() => movePan(0, 50)}
             className="p-1 sm:p-1.5 hover:bg-primary/20 rounded-md transition-colors active:scale-95"
-            title="Mover abajo"
           >
             <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
           </button>
           <button
-            onClick={() => movePan(50, 0)} // Derecha mueve el objeto hacia la derecha
+            onClick={() => movePan(50, 0)}
             className="p-1 sm:p-1.5 hover:bg-primary/20 rounded-md transition-colors active:scale-95"
-            title="Mover derecha"
           >
             <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
           </button>
         </div>
       </div>
 
-      {/* Zoom control overlay */}
+      {/* Zoom control */}
       <div className="absolute bottom-3 right-3 glass-panel rounded-lg px-2 sm:px-3 py-2 flex items-center gap-2 w-32 sm:w-48 z-10">
         <ZoomOut className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
         <Slider

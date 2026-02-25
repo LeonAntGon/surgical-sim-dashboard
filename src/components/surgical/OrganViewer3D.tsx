@@ -15,22 +15,27 @@ const fallbackImages: Record<string, string> = {
   liver: surgicalLiver,
 };
 
-function OrganModel({ organ, zoom }: { organ: string; zoom: number }) {
+// Recibimos panRef
+interface OrganModelProps {
+  organ: string;
+  zoom: number;
+  panRef: React.MutableRefObject<{ x: number; y: number }>;
+}
+
+function OrganModel({ organ, zoom, panRef }: OrganModelProps) {
   const groupRef = useRef<THREE.Group>(null);
   const path = modelPaths[organ] || modelPaths.liver;
   const { scene } = useGLTF(path);
 
-  // CORRECCIÓN: Auto-escalado inteligente. Mide el modelo y lo ajusta para que 
-  // no quede gigante ni minúsculo sin importar cómo venga el .glb
+  // Auto-escalado para centrar modelos grandes/pequeños
   useLayoutEffect(() => {
     if (scene) {
-      scene.scale.set(1, 1, 1); // Reseteamos escala por si acaso
+      scene.scale.set(1, 1, 1);
       const box = new THREE.Box3().setFromObject(scene);
       const size = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.y, size.z);
       
       if (maxDim > 0) {
-        // Fijamos un tamaño objetivo de 4 unidades para que encaje perfecto en cámara
         const scale = 4 / maxDim;
         scene.scale.set(scale, scale, scale);
       }
@@ -39,10 +44,22 @@ function OrganModel({ organ, zoom }: { organ: string; zoom: number }) {
 
   useFrame(() => {
     if (groupRef.current) {
+      // 1. Zoom fluido
       const targetScale = 0.5 + (zoom / 100) * 2;
       groupRef.current.scale.lerp(
         new THREE.Vector3(targetScale, targetScale, targetScale),
         0.1
+      );
+
+      // 2. Paneo fluido en espacio 3D (SOLUCIÓN AL CORTE)
+      // Multiplicamos por 0.015 para convertir la fuerza de los píxeles a distancia 3D.
+      // Invertimos Y (-panRef) porque en HTML "abajo" es positivo, pero en 3D "abajo" es negativo.
+      const targetX = panRef.current.x * 0.015;
+      const targetY = -panRef.current.y * 0.015;
+
+      groupRef.current.position.lerp(
+        new THREE.Vector3(targetX, targetY, 0),
+        0.15
       );
     }
   });
@@ -103,9 +120,10 @@ function supportsWebGL(): boolean {
 interface OrganViewer3DProps {
   organ: string;
   zoom: number;
+  panRef: React.MutableRefObject<{ x: number; y: number }>;
 }
 
-export function OrganViewer3D({ organ, zoom }: OrganViewer3DProps) {
+export function OrganViewer3D({ organ, zoom, panRef }: OrganViewer3DProps) {
   const [webgl] = useReactState(() => supportsWebGL());
 
   if (!webgl) {
@@ -125,7 +143,7 @@ export function OrganViewer3D({ organ, zoom }: OrganViewer3DProps) {
         <pointLight position={[0, 2, 0]} intensity={0.5} color="hsl(174, 60%, 60%)" />
 
         <Suspense fallback={<LoadingFallback />}>
-          <OrganModel organ={organ} zoom={zoom} />
+          <OrganModel organ={organ} zoom={zoom} panRef={panRef} />
           <Environment preset="studio" />
         </Suspense>
 
